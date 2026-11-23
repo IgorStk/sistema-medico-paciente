@@ -1,5 +1,5 @@
-// Comando api sobe o prontuario-service: prontuário do paciente, anexos,
-// histórico e emissão de laudos. Consome o documentos-service via HTTP.
+// Comando api sobe o prontuario-service: prontuário do paciente, documentos
+// anexados (enviados pelo documentos-service), laudos e histórico clínico.
 package main
 
 import (
@@ -12,10 +12,10 @@ import (
 	"syscall"
 	"time"
 
-	"prontuario-service/internal/adapters/documentos"
 	"prontuario-service/internal/adapters/httpapi"
 	"prontuario-service/internal/adapters/postgres"
 	"prontuario-service/internal/config"
+	"prontuario-service/internal/servico"
 )
 
 const nomeServico = "prontuario-service"
@@ -42,23 +42,27 @@ func executar(log *slog.Logger) error {
 		return err
 	}
 	defer pool.Close()
-
 	if err := postgres.Migrar(ctx, pool); err != nil {
 		return err
 	}
 	log.Info("banco conectado e migrações aplicadas")
 
-	clienteDocumentos := documentos.NovoCliente(cfg.DocumentosServiceURL)
+	handler := httpapi.NovoHandler(httpapi.Dependencias{
+		Servico:    nomeServico,
+		Log:        log,
+		Banco:      pool,
+		Prontuario: servico.NovoProntuario(postgres.NovoProntuarioRepository(pool)),
+	})
 
 	servidor := &http.Server{
 		Addr:              ":" + cfg.Porta,
-		Handler:           httpapi.NovoRouter(httpapi.NovoHandler(nomeServico, pool, clienteDocumentos), cfg.CORSOrigens, log),
+		Handler:           httpapi.NovoRouter(handler, cfg.CORSOrigens),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	erros := make(chan error, 1)
 	go func() {
-		log.Info("servidor HTTP ouvindo", "porta", cfg.Porta, "documentos_service", cfg.DocumentosServiceURL)
+		log.Info("servidor HTTP ouvindo", "porta", cfg.Porta)
 		if err := servidor.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			erros <- err
 		}

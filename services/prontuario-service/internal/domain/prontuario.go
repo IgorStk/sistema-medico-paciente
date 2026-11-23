@@ -4,17 +4,19 @@ package domain
 
 import (
 	"errors"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-var (
-	ErrProntuarioNaoEncontrado  = errors.New("prontuário não encontrado")
-	ErrDocumentoNaoEncontrado   = errors.New("documento não encontrado")
-	ErrDocumentoDeOutroPaciente = errors.New("documento pertence a outro paciente")
-	ErrDocumentoJaAnexado       = errors.New("documento já anexado a este prontuário")
-)
+var ErrTipoDocumentoInvalido = errors.New("tipo de documento inválido")
+
+// ErroValidacao indica dados de entrada inválidos (vira HTTP 400).
+type ErroValidacao struct{ Mensagem string }
+
+func (e *ErroValidacao) Error() string { return e.Mensagem }
 
 // Prontuario é o registro clínico de um paciente: um por paciente
 // (composição 1:1 com Paciente no diagrama).
@@ -29,49 +31,105 @@ func NovoProntuario(pacienteID uuid.UUID, agora time.Time) Prontuario {
 	return Prontuario{ID: uuid.New(), PacienteID: pacienteID, CriadoEm: agora}
 }
 
-// DocumentoAnexado liga ao prontuário um documento que vive no
-// documentos-service (agregação Prontuario o-- Documento no diagrama).
-type DocumentoAnexado struct {
-	ProntuarioID uuid.UUID `json:"prontuarioId"`
-	DocumentoID  uuid.UUID `json:"documentoId"`
-	AnexadoPor   uuid.UUID `json:"anexadoPor"`
-	AnexadoEm    time.Time `json:"anexadoEm"`
-}
+// TiposDocumento são os mesmos da enumeração TipoDocumento do documentos-service.
+var TiposDocumento = []string{"EXAME_PREVIO", "LAUDO", "RECEITA", "ATESTADO"}
 
-// DocumentoResumo são os metadados de um documento, como o documentos-service
-// os devolve. É uma cópia local: este serviço não importa código do outro.
-type DocumentoResumo struct {
-	ID           uuid.UUID  `json:"id"`
+// DocumentoAnexado é um documento que o documentos-service anexou ao
+// prontuário (seta "anexar" do diagrama de microsserviços). Guardamos uma
+// cópia dos metadados para o histórico não depender do outro serviço; o
+// arquivo em si continua no documentos-service.
+type DocumentoAnexado struct {
+	DocumentoID  uuid.UUID  `json:"documentoId"`
 	Tipo         string     `json:"tipo"`
-	PacienteID   uuid.UUID  `json:"pacienteId"`
-	ConsultaID   *uuid.UUID `json:"consultaId,omitempty"`
-	AutorID      uuid.UUID  `json:"autorId"`
 	NomeOriginal string     `json:"nomeOriginal"`
 	ContentType  string     `json:"contentType"`
 	TamanhoBytes int64      `json:"tamanhoBytes"`
+	ConsultaID   *uuid.UUID `json:"consultaId,omitempty"`
+	AutorID      uuid.UUID  `json:"autorId"`
 	EnviadoEm    time.Time  `json:"enviadoEm"`
+	AnexadoEm    time.Time  `json:"anexadoEm"`
 }
 
-// ItemHistorico é uma linha do histórico: o anexo mais os metadados do documento.
-type ItemHistorico struct {
-	DocumentoAnexado
-	Documento DocumentoResumo `json:"documento"`
+// Validar confere os dados recebidos do documentos-service.
+func (d DocumentoAnexado) Validar() error {
+	switch {
+	case d.DocumentoID == uuid.Nil:
+		return &ErroValidacao{Mensagem: "documentoId é obrigatório"}
+	case !slices.Contains(TiposDocumento, d.Tipo):
+		return ErrTipoDocumentoInvalido
+	case strings.TrimSpace(d.NomeOriginal) == "":
+		return &ErroValidacao{Mensagem: "nomeOriginal é obrigatório"}
+	case d.AutorID == uuid.Nil:
+		return &ErroValidacao{Mensagem: "autorId é obrigatório"}
+	case d.EnviadoEm.IsZero():
+		return &ErroValidacao{Mensagem: "enviadoEm é obrigatório"}
+	}
+	return nil
 }
 
-// NovoLaudo são os dados de um laudo emitido pelo médico.
+const (
+	TamanhoMaxTitulo   = 200
+	TamanhoMaxConteudo = 20000
+)
+
+// Laudo é o laudo escrito pelo médico diretamente no prontuário
+// (operação "emitir laudo"). Laudos em PDF entram pelo documentos-service
+// com tipo LAUDO e chegam aqui como DocumentoAnexado.
+type Laudo struct {
+	ID           uuid.UUID  `json:"id"`
+	ProntuarioID uuid.UUID  `json:"prontuarioId"`
+	ConsultaID   *uuid.UUID `json:"consultaId,omitempty"`
+	MedicoID     uuid.UUID  `json:"medicoId"`
+	Titulo       string     `json:"titulo"`
+	Conteudo     string     `json:"conteudo"`
+	EmitidoEm    time.Time  `json:"emitidoEm"`
+}
+
+// NovoLaudo são os dados enviados pelo médico.
 type NovoLaudo struct {
-	AutorID     uuid.UUID
-	ConsultaID  *uuid.UUID
-	NomeArquivo string
-	ContentType string
+	ConsultaID *uuid.UUID `json:"consultaId"`
+	MedicoID   uuid.UUID  `json:"medicoId"`
+	Titulo     string     `json:"titulo"`
+	Conteudo   string     `json:"conteudo"`
 }
 
-// EnvioDocumento é o pedido de upload enviado ao documentos-service.
-type EnvioDocumento struct {
-	Tipo        string
-	PacienteID  uuid.UUID
-	ConsultaID  *uuid.UUID
-	AutorID     uuid.UUID
-	NomeArquivo string
-	ContentType string
+func (n NovoLaudo) Validar() error {
+	titulo, conteudo := strings.TrimSpace(n.Titulo), strings.TrimSpace(n.Conteudo)
+	switch {
+	case n.MedicoID == uuid.Nil:
+		return &ErroValidacao{Mensagem: "medicoId é obrigatório"}
+	case n.ConsultaID != nil && *n.ConsultaID == uuid.Nil:
+		return &ErroValidacao{Mensagem: "consultaId inválido"}
+	case titulo == "":
+		return &ErroValidacao{Mensagem: "titulo é obrigatório"}
+	case len([]rune(titulo)) > TamanhoMaxTitulo:
+		return &ErroValidacao{Mensagem: "titulo muito longo"}
+	case conteudo == "":
+		return &ErroValidacao{Mensagem: "conteudo é obrigatório"}
+	case len([]rune(conteudo)) > TamanhoMaxConteudo:
+		return &ErroValidacao{Mensagem: "conteudo muito longo"}
+	}
+	return nil
+}
+
+// ItemHistorico é uma linha do histórico clínico: um documento anexado ou um
+// laudo emitido. Exatamente um dos dois campos vem preenchido.
+type ItemHistorico struct {
+	Tipo      string            `json:"tipo"` // "DOCUMENTO" ou "LAUDO"
+	Data      time.Time         `json:"data"`
+	Documento *DocumentoAnexado `json:"documento,omitempty"`
+	Laudo     *Laudo            `json:"laudo,omitempty"`
+}
+
+// MontarHistorico junta documentos e laudos, do mais recente para o mais antigo.
+func MontarHistorico(docs []DocumentoAnexado, laudos []Laudo) []ItemHistorico {
+	itens := make([]ItemHistorico, 0, len(docs)+len(laudos))
+	for i := range docs {
+		itens = append(itens, ItemHistorico{Tipo: "DOCUMENTO", Data: docs[i].EnviadoEm, Documento: &docs[i]})
+	}
+	for i := range laudos {
+		itens = append(itens, ItemHistorico{Tipo: "LAUDO", Data: laudos[i].EmitidoEm, Laudo: &laudos[i]})
+	}
+	slices.SortStableFunc(itens, func(a, b ItemHistorico) int { return b.Data.Compare(a.Data) })
+	return itens
 }

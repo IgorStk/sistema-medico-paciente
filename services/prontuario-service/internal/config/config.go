@@ -2,34 +2,24 @@
 package config
 
 import (
-	"fmt"
-	"net/url"
 	"os"
 	"strings"
 )
 
 type Config struct {
-	Porta                string
-	DatabaseURL          string
-	CORSOrigens          []string
-	DocumentosServiceURL string
+	Porta       string
+	DatabaseURL string
+	CORSOrigens []string
 }
 
 // Load lê as variáveis de ambiente. Os valores padrão servem para rodar
 // localmente com o docker-compose da raiz do repositório.
 func Load() (Config, error) {
-	cfg := Config{
-		Porta:                env("PORT", "8082"),
-		DatabaseURL:          env("DATABASE_URL", "postgres://prontuario:prontuario@localhost:5434/prontuario_db?sslmode=disable"),
-		CORSOrigens:          separarLista(env("CORS_ORIGINS", "http://localhost:5173")),
-		DocumentosServiceURL: strings.TrimRight(env("DOCUMENTOS_SERVICE_URL", "http://localhost:8081"), "/"),
-	}
-
-	u, err := url.Parse(cfg.DocumentosServiceURL)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-		return Config{}, fmt.Errorf("DOCUMENTOS_SERVICE_URL inválida: %q", cfg.DocumentosServiceURL)
-	}
-	return cfg, nil
+	return Config{
+		Porta:       env("PORT", "8082"),
+		DatabaseURL: env("DATABASE_URL", "postgres://prontuario:prontuario@localhost:5434/prontuario_db?sslmode=disable"),
+		CORSOrigens: separarLista(env("CORS_ORIGINS", "http://localhost:5173")),
+	}, nil
 }
 
 func env(chave, padrao string) string {
