@@ -45,6 +45,7 @@ services/
   documentos-service/   Go: upload, consulta e download de documentos (anexa ao prontuário)
   prontuario-service/   Go: prontuário, histórico e laudos
 scripts/rodar-supabase.ps1  roda os serviços Go sem Docker, usando o Supabase
+frontend-teste/         página única para testar os serviços Go pela tela
 docker-compose*.yml     alternativa com Docker (opcional)
 go.work                 workspace Go (para o VSCode/gopls enxergar os dois módulos)
 ```
@@ -75,6 +76,27 @@ As tabelas e o bucket são criados automaticamente na primeira subida.
 
 Para ver os dados, use o painel do Supabase: **Table Editor** para as tabelas e
 **Storage** para os arquivos.
+
+### Painel de teste (frontend mínimo)
+
+[`frontend-teste/index.html`](frontend-teste/index.html) é uma página única,
+sem build, para testar os serviços Go pela tela. Ela permite:
+
+- gerar IDs fictícios de paciente, médico e consulta;
+- enviar um documento (que é anexado ao prontuário);
+- emitir um laudo;
+- ver o histórico e os documentos de uma consulta;
+- abrir os arquivos.
+
+Com os serviços rodando, sirva a página na porta 5173, que já está liberada no
+CORS:
+
+```powershell
+python -m http.server 5173 --bind 127.0.0.1 -d frontend-teste
+```
+
+Depois abra http://localhost:5173. Abrir o arquivo direto (`file://`) não
+funciona por causa do CORS.
 
 ### Alternativa com Docker (opcional)
 

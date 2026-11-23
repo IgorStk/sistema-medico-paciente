@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel de Teste</title>
+<style>
+  :root {
+    --fundo: #ffffff;
+    --fundo-secao: #f5f5f7;
+    --cartao: #ffffff;
+    --texto: #1d1d1f;
+    --texto-2: #6e6e73;
+    --linha: #d2d2d7;
+    --azul: #0071e3;
+    --azul-hover: #0077ed;
+    --link: #0066cc;
+    --verde: #1d8a3a;
+    --vermelho: #d70015;
+    --raio: 18px;
+    --fonte: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fundo); color: var(--texto); font-family: var(--fonte);
+         font-size: 17px; line-height: 1.47; letter-spacing: -0.022em; -webkit-font-smoothing: antialiased; }
+
+  /* Barra de navegação fina e translúcida */
+  nav { position: sticky; top: 0; z-index: 10; height: 44px; display: flex; align-items: center;
+        justify-content: center; gap: 32px; background: rgba(251,251,253,.8);
+        backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px);
+        border-bottom: 1px solid rgba(0,0,0,.08); font-size: 12px; }
+  nav a { color: var(--texto); opacity: .8; text-decoration: none; }
+  nav a:hover { opacity: 1; }
+
+  /* Destaque */
+  .hero { text-align: center; padding: 64px 16px 40px; }
+  .hero h1 { font-size: clamp(40px, 7vw, 56px); line-height: 1.07; letter-spacing: -0.005em; font-weight: 600; margin: 0; }
+  .hero p { font-size: clamp(19px, 3vw, 24px); color: var(--texto-2); margin: 8px 0 0; font-weight: 400; }
+  .status { display: inline-flex; gap: 20px; margin-top: 24px; font-size: 14px; color: var(--texto-2); flex-wrap: wrap; justify-content: center; }
+  .ponto { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--linha); margin-right: 6px; vertical-align: 1px; }
+  .ponto.ok { background: var(--verde); }
+  .ponto.erro { background: var(--vermelho); }
+
+  section.cinza { background: var(--fundo-secao); padding: 48px 16px 80px; }
+  .grade { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+  .cartao { background: var(--cartao); border-radius: var(--raio); padding: 28px; }
+  .cartao.largo { grid-column: 1 / -1; }
+  .cartao h2 { font-size: 24px; line-height: 1.17; font-weight: 600; margin: 0 0 4px; letter-spacing: .009em; }
+  .cartao .sub { color: var(--texto-2); font-size: 14px; margin: 0 0 20px; }
+
+  label { display: block; font-size: 12px; color: var(--texto-2); margin: 14px 0 6px; }
+  input[type=text], select, textarea {
+    width: 100%; font: inherit; font-size: 15px; color: var(--texto); background: #fff;
+    border: 1px solid var(--linha); border-radius: 12px; padding: 11px 14px; outline: none; }
+  input[type=text]:focus, select:focus, textarea:focus { border-color: var(--azul); box-shadow: 0 0 0 4px rgba(0,113,227,.15); }
+  input[type=text] { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 13px; }
+  textarea { min-height: 96px; resize: vertical; }
+  input[type=file] { font: inherit; font-size: 14px; width: 100%; }
+  .linha { display: flex; gap: 8px; align-items: center; }
+  .linha input { flex: 1; }
+
+  /* Botões em pílula */
+  .botoes { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 22px; align-items: center; }
+  button { font: inherit; font-size: 17px; border: 0; cursor: pointer; border-radius: 980px;
+           padding: 11px 22px; background: var(--azul); color: #fff; transition: background .15s; }
+  button:hover { background: var(--azul-hover); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.secundario { background: transparent; color: var(--azul); border: 1px solid var(--azul); }
+  button.secundario:hover { background: var(--azul); color: #fff; }
+  button.mini { font-size: 12px; padding: 6px 12px; background: transparent; color: var(--link); border: 1px solid var(--linha); }
+  button.mini:hover { border-color: var(--link); background: transparent; }
+  a.link { color: var(--link); text-decoration: none; font-size: 14px; }
+  a.link:hover { text-decoration: underline; }
+
+  /* Histórico */
+  .vazio { color: var(--texto-2); font-size: 15px; padding: 24px 0 4px; text-align: center; }
+  ul.hist { list-style: none; margin: 8px 0 0; padding: 0; }
+  ul.hist li { display: flex; gap: 14px; padding: 16px 0; border-top: 1px solid #e8e8ed; align-items: flex-start; }
+  ul.hist li:first-child { border-top: 0; }
+  .selo { flex: none; font-size: 11px; font-weight: 600; letter-spacing: .02em; border-radius: 6px; padding: 3px 8px;
+          background: #e8f0fe; color: var(--azul); margin-top: 2px; }
+  .selo.laudo { background: #e9f6ec; color: var(--verde); }
+  .item { flex: 1; min-width: 0; }
+  .item strong { display: block; font-weight: 600; font-size: 15px; overflow-wrap: anywhere; }
+  .item .meta { color: var(--texto-2); font-size: 13px; }
+  .item p { margin: 6px 0 0; font-size: 15px; white-space: pre-wrap; }
+
+  .mensagem { font-size: 14px; min-height: 20px; }
+  .mensagem.ok { color: var(--verde); }
+  .mensagem.erro { color: var(--vermelho); }
+
+  pre.log { margin: 0; background: #1d1d1f; color: #f5f5f7; border-radius: 12px; padding: 16px; font-size: 12px;
+            max-height: 260px; overflow: auto; white-space: pre-wrap; word-break: break-all;
+            font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+
+  footer { text-align: center; font-size: 12px; color: var(--texto-2); padding: 20px 16px 32px; background: var(--fundo-secao); }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="#identidade">Identidade</a>
+  <a href="#documento">Documento</a>
+  <a href="#laudo">Laudo</a>
+  <a href="#historico">Prontuário</a>
+</nav>
+
+<header class="hero">
+  <h1>Paciente e médico.<br>A um clique.</h1>
+  <p>Painel de teste dos serviços de documentos e prontuário.</p>
+  <div class="status">
+    <span><span id="st-doc" class="ponto"></span>documentos-service</span>
+    <span><span id="st-pront" class="ponto"></span>prontuario-service</span>
+    <button class="mini" onclick="verificarSaude()">Verificar de novo</button>
+  </div>
+</header>
+
+<section class="cinza">
+  <div class="grade">
+
+    <div class="cartao" id="identidade">
+      <h2>Identidade de teste</h2>
+      <p class="sub">Ainda não há login. Use IDs fictícios; eles ficam salvos neste navegador.</p>
+      <label for="paciente">Paciente</label>
+      <div class="linha"><input type="text" id="paciente"><button class="mini" onclick="novoId('paciente')">Novo</button></div>
+      <label for="medico">Médico</label>
+      <div class="linha"><input type="text" id="medico"><button class="mini" onclick="novoId('medico')">Novo</button></div>
+      <label for="consulta">Consulta (opcional)</label>
+      <div class="linha"><input type="text" id="consulta" placeholder="vazio = sem consulta"><button class="mini" onclick="novoId('consulta')">Novo</button></div>
+    </div>
+
+    <div class="cartao" id="documento">
+      <h2>Enviar documento</h2>
+      <p class="sub">PDF, JPEG, PNG ou WEBP. Vai para o Storage e é anexado ao prontuário.</p>
+      <label for="tipo">Tipo</label>
+      <select id="tipo">
+        <option value="EXAME_PREVIO">Exame prévio</option>
+        <option value="LAUDO">Laudo (PDF)</option>
+        <option value="RECEITA">Receita</option>
+        <option value="ATESTADO">Atestado</option>
+      </select>
+      <label for="enviadoPor">Enviado por</label>
+      <select id="enviadoPor">
+        <option value="paciente">Paciente</option>
+        <option value="medico">Médico</option>
+      </select>
+      <label for="arquivo">Arquivo</label>
+      <input type="file" id="arquivo" accept=".pdf,.jpg,.jpeg,.png,.webp">
+      <div class="botoes">
+        <button id="btEnviar" onclick="enviarDocumento()">Enviar</button>
+        <span id="msgDoc" class="mensagem"></span>
+      </div>
+    </div>
+
+    <div class="cartao" id="laudo">
+      <h2>Emitir laudo</h2>
+      <p class="sub">O médico escreve o laudo direto no prontuário do paciente.</p>
+      <label for="titulo">Título</label>
+      <input type="text" id="titulo" value="Laudo do hemograma" style="font-family:inherit;font-size:15px">
+      <label for="conteudo">Conteúdo</label>
+      <textarea id="conteudo">Hemograma sem alterações significativas.</textarea>
+      <div class="botoes">
+        <button id="btLaudo" onclick="emitirLaudo()">Emitir laudo</button>
+        <span id="msgLaudo" class="mensagem"></span>
+      </div>
+    </div>
+
+    <div class="cartao largo" id="historico">
+      <h2>Prontuário</h2>
+      <p class="sub">Histórico clínico do paciente: documentos anexados e laudos, do mais recente ao mais antigo.</p>
+      <div class="botoes" style="margin-top:0">
+        <button onclick="carregarHistorico()">Ver histórico</button>
+        <button class="secundario" onclick="listarDaConsulta()">Documentos da consulta</button>
+      </div>
+      <div id="listaHistorico"></div>
+    </div>
+
+    <div class="cartao largo">
+      <h2>Última resposta</h2>
+      <p class="sub">O que a API devolveu na última chamada.</p>
+      <pre class="log" id="log">—</pre>
+    </div>
+
+  </div>
+</section>
+
+<footer>Projeto e Arquitetura de Sistemas · UNIFOR · ambiente de teste com dados fictícios</footer>
+
+<script>
+  // Endereços dos serviços (rodando com scripts/rodar-supabase.ps1).
+  const DOCUMENTOS = "http://localhost:8081";
+  const PRONTUARIO = "http://localhost:8082";
+
+  const $ = (id) => document.getElementById(id);
+
+  // ---------- Identidade (guardada no navegador) ----------
+  function ler(chave) { try { return localStorage.getItem(chave); } catch { return null; } }
+  function gravar(chave, valor) { try { localStorage.setItem(chave, valor); } catch {} }
+
+  function novoId(campo) {
+    $(campo).value = crypto.randomUUID();
+    gravar(campo, $(campo).value);
+  }
+  for (const campo of ["paciente", "medico", "consulta"]) {
+    const salvo = ler(campo);
+    if (salvo !== null) $(campo).value = salvo;
+    else if (campo !== "consulta") novoId(campo);
+    $(campo).addEventListener("change", () => gravar(campo, $(campo).value.trim()));
+  }
+
+  // ---------- Utilidades ----------
+  function mostrarLog(metodo, url, status, corpo) {
+    const texto = typeof corpo === "string" ? corpo : JSON.stringify(corpo, null, 2);
+    $("log").textContent = `${metodo} ${url}\n→ ${status}\n\n${texto}`;
+  }
+
+  async function chamar(metodo, url, opcoes = {}) {
+    let resp;
+    try {
+      resp = await fetch(url, { method: metodo, ...opcoes });
+    } catch (e) {
+      mostrarLog(metodo, url, "falha de conexão", "Serviço fora do ar? Rode scripts/rodar-supabase.ps1.");
+      throw new Error("Não consegui falar com o serviço.");
+    }
+    const texto = await resp.text();
+    let corpo = texto;
+    try { corpo = JSON.parse(texto); } catch {}
+    mostrarLog(metodo, url, resp.status, corpo);
+    if (!resp.ok) throw new Error(corpo?.erro || `Erro ${resp.status}`);
+    return corpo;
+  }
+
+  function aviso(id, texto, ok) {
+    $(id).textContent = texto;
+    $(id).className = "mensagem " + (ok ? "ok" : "erro");
+  }
+
+  function idObrigatorio(campo, nome) {
+    const v = $(campo).value.trim();
+    if (!v) throw new Error(`Preencha o ID do ${nome}.`);
+    return v;
+  }
+
+  const dataHora = (iso) => new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+  const tamanho = (b) => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(1)} KB` : `${(b / 1048576).toFixed(1)} MB`;
+  const nomesTipo = { EXAME_PREVIO: "Exame prévio", LAUDO: "Laudo", RECEITA: "Receita", ATESTADO: "Atestado" };
+
+  // ---------- Saúde ----------
+  async function verificarSaude() {
+    for (const [id, base] of [["st-doc", DOCUMENTOS], ["st-pront", PRONTUARIO]]) {
+      $(id).className = "ponto";
+      try {
+        const r = await fetch(base + "/health");
+        $(id).className = "ponto " + (r.ok ? "ok" : "erro");
+      } catch { $(id).className = "ponto erro"; }
+    }
+  }
+
+  // ---------- Enviar documento ----------
+  async function enviarDocumento() {
+    const bt = $("btEnviar");
+    try {
+      const paciente = idObrigatorio("paciente", "paciente");
+      const autor = idObrigatorio($("enviadoPor").value, $("enviadoPor").value);
+      const arquivo = $("arquivo").files[0];
+      if (!arquivo) throw new Error("Escolha um arquivo.");
+
+      const form = new FormData();
+      form.append("tipo", $("tipo").value);
+      form.append("pacienteId", paciente);
+      form.append("autorId", autor);
+      const consulta = $("consulta").value.trim();
+      if (consulta) form.append("consultaId", consulta);
+      form.append("arquivo", arquivo);
+
+      bt.disabled = true;
+      aviso("msgDoc", "Enviando…", true);
+      const doc = await chamar("POST", DOCUMENTOS + "/documentos", { body: form });
+      aviso("msgDoc", `Enviado e anexado: ${doc.nomeOriginal}`, true);
+      $("arquivo").value = "";
+      carregarHistorico();
+    } catch (e) {
+      aviso("msgDoc", e.message, false);
+    } finally { bt.disabled = false; }
+  }
+
+  // ---------- Emitir laudo ----------
+  async function emitirLaudo() {
+    const bt = $("btLaudo");
+    try {
+      const paciente = idObrigatorio("paciente", "paciente");
+      const corpo = {
+        medicoId: idObrigatorio("medico", "médico"),
+        titulo: $("titulo").value,
+        conteudo: $("conteudo").value,
+      };
+      const consulta = $("consulta").value.trim();
+      if (consulta) corpo.consultaId = consulta;
+
+      bt.disabled = true;
+      await chamar("POST", `${PRONTUARIO}/pacientes/${encodeURIComponent(paciente)}/prontuario/laudos`, {
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(corpo),
+      });
+      aviso("msgLaudo", "Laudo emitido.", true);
+      carregarHistorico();
+    } catch (e) {
+      aviso("msgLaudo", e.message, false);
+    } finally { bt.disabled = false; }
+  }
+
+  // ---------- Histórico ----------
+  function elemento(tag, classe, texto) {
+    const el = document.createElement(tag);
+    if (classe) el.className = classe;
+    if (texto !== undefined) el.textContent = texto;
+    return el;
+  }
+
+  function linkArquivo(documentoId) {
+    const a = elemento("a", "link", "Abrir arquivo");
+    a.href = `${DOCUMENTOS}/documentos/${documentoId}/arquivo?inline=true`;
+    a.target = "_blank";
+    a.rel = "noopener";
+    return a;
+  }
+
+  function renderizar(itens, vazio) {
+    const lista = $("listaHistorico");
+    lista.replaceChildren();
+    if (!itens.length) { lista.append(elemento("div", "vazio", vazio)); return; }
+    const ul = elemento("ul", "hist");
+    for (const it of itens) {
+      const li = elemento("li");
+      const caixa = elemento("div", "item");
+      if (it.laudo) {
+        li.append(elemento("span", "selo laudo", "LAUDO"));
+        caixa.append(elemento("strong", "", it.laudo.titulo));
+        caixa.append(elemento("div", "meta", dataHora(it.data)));
+        caixa.append(elemento("p", "", it.laudo.conteudo));
+      } else {
+        const d = it.documento;
+        li.append(elemento("span", "selo", nomesTipo[d.tipo] || d.tipo));
+        caixa.append(elemento("strong", "", d.nomeOriginal));
+        caixa.append(elemento("div", "meta", `${dataHora(it.data)} · ${tamanho(d.tamanhoBytes)}`));
+        caixa.append(linkArquivo(d.documentoId));
+      }
+      li.append(caixa);
+      ul.append(li);
+    }
+    lista.append(ul);
+  }
+
+  async function carregarHistorico() {
+    try {
+      const paciente = idObrigatorio("paciente", "paciente");
+      const itens = await chamar("GET", `${PRONTUARIO}/pacientes/${encodeURIComponent(paciente)}/prontuario/historico`);
+      renderizar(itens, "Nada no prontuário ainda. Envie um documento ou emita um laudo.");
+    } catch (e) {
+      renderizar([], e.message);
+    }
+  }
+
+  async function listarDaConsulta() {
+    try {
+      const consulta = idObrigatorio("consulta", "consulta");
+      const docs = await chamar("GET", `${DOCUMENTOS}/documentos?consultaId=${encodeURIComponent(consulta)}`);
+      renderizar(docs.map(d => ({ data: d.enviadoEm, documento: { ...d, documentoId: d.id } })),
+                 "Nenhum documento nesta consulta.");
+    } catch (e) {
+      renderizar([], e.message);
+    }
+  }
+
+  verificarSaude();
+</script>
+</body>
+</html>
