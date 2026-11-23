@@ -1,0 +1,8 @@
+{
+  "name": "frontend",
+  "private": true,
+  "description": "Painel de teste: npm run dev serve a página em http://localhost:5173",
+  "scripts": {
+    "dev": "node servidor.mjs"
+  }
+}

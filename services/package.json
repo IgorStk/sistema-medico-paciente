@@ -1,0 +1,9 @@
+{
+  "name": "servicos-go",
+  "private": true,
+  "description": "Atalho: npm run dev compila e sobe documentos-service (8081) e prontuario-service (8082) usando o Supabase do .env",
+  "scripts": {
+    "dev": "powershell -NoProfile -File ../scripts/rodar-supabase.ps1",
+    "test": "cd documentos-service && go test ./... && cd ../prontuario-service && go test ./..."
+  }
+}

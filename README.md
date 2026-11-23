@@ -44,8 +44,8 @@ para o serviço certo.
 services/
   documentos-service/   Go: upload, consulta e download de documentos (anexa ao prontuário)
   prontuario-service/   Go: prontuário, histórico e laudos
-scripts/rodar-supabase.ps1  roda os serviços Go sem Docker, usando o Supabase
-frontend-teste/         página única para testar os serviços Go pela tela
+scripts/rodar-supabase.ps1  roda os serviços Go sem Docker (chamado pelo npm run dev de services/)
+frontend/               página única para testar os serviços Go pela tela
 docker-compose*.yml     alternativa com Docker (opcional)
 go.work                 workspace Go (para o VSCode/gopls enxergar os dois módulos)
 ```
@@ -56,31 +56,27 @@ Os bancos ficam no **Supabase**: um projeto por serviço (`documentos` e
 `prontuario`). Os arquivos ficam no **Supabase Storage** do projeto
 `documentos`. Nada de banco roda na sua máquina.
 
-Pré-requisito: [Go](https://go.dev/dl/) 1.27 ou mais novo.
+Pré-requisitos: [Go](https://go.dev/dl/) 1.27+ e [Node.js](https://nodejs.org/) (só pelo `npm run dev`).
 
 1. Copie `.env.example` para `.env` e preencha com as URLs e chaves do Supabase.
    O `.env` não vai para o Git: peça os valores a quem cuida dos serviços em Go.
-2. No PowerShell, na raiz do repositório:
+2. Abra **dois terminais**:
 
-```powershell
-.\scripts\rodar-supabase.ps1
-```
+| Terminal | Pasta | Comando | O que sobe |
+|---|---|---|---|
+| 1 (API) | `services` | `npm run dev` | documentos-service em http://localhost:8081 e prontuario-service em http://localhost:8082 |
+| 2 (front) | `frontend` | `npm run dev` | painel de teste em **http://localhost:5173** |
 
-O script compila e sobe os dois serviços no mesmo terminal (Ctrl+C para os dois).
+Ctrl+C para cada um. Na primeira vez, a API demora um pouco para compilar.
 As tabelas e o bucket são criados automaticamente na primeira subida.
-
-| Serviço | URL |
-|---|---|
-| documentos-service | http://localhost:8081/health |
-| prontuario-service | http://localhost:8082/health |
 
 Para ver os dados, use o painel do Supabase: **Table Editor** para as tabelas e
 **Storage** para os arquivos.
 
 ### Painel de teste (frontend mínimo)
 
-[`frontend-teste/index.html`](frontend-teste/index.html) é uma página única,
-sem build, para testar os serviços Go pela tela. Ela permite:
+[`frontend/index.html`](frontend/index.html) é uma página única,
+sem build e sem dependências, para testar os serviços Go pela tela. Ela permite:
 
 - gerar IDs fictícios de paciente, médico e consulta;
 - enviar um documento (que é anexado ao prontuário);
@@ -88,15 +84,8 @@ sem build, para testar os serviços Go pela tela. Ela permite:
 - ver o histórico e os documentos de uma consulta;
 - abrir os arquivos.
 
-Com os serviços rodando, sirva a página na porta 5173, que já está liberada no
-CORS:
-
-```powershell
-python -m http.server 5173 --bind 127.0.0.1 -d frontend-teste
-```
-
-Depois abra http://localhost:5173. Abrir o arquivo direto (`file://`) não
-funciona por causa do CORS.
+Ela precisa ser aberta por http://localhost:5173: abrir o arquivo direto
+(`file://`) não funciona por causa do CORS.
 
 ### Alternativa com Docker (opcional)
 
