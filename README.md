@@ -42,8 +42,8 @@ para o serviço certo.
 
 ```
 services/
-  documentos-service/   Go: upload, consulta e download de documentos
-  prontuario-service/   Go: prontuário, histórico e laudos (consome documentos-service)
+  documentos-service/   Go: upload, consulta e download de documentos (anexa ao prontuário)
+  prontuario-service/   Go: prontuário, histórico e laudos
 scripts/rodar-supabase.ps1  roda os serviços Go sem Docker, usando o Supabase
 docker-compose*.yml     alternativa com Docker (opcional)
 go.work                 workspace Go (para o VSCode/gopls enxergar os dois módulos)

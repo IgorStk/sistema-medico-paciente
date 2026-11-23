@@ -87,6 +87,13 @@ func (r *DocumentoRepository) Listar(ctx context.Context, f domain.FiltroDocumen
 	return docs, nil
 }
 
+func (r *DocumentoRepository) Remover(ctx context.Context, id uuid.UUID) error {
+	if _, err := r.pool.Exec(ctx, `DELETE FROM documentos WHERE id = $1`, id); err != nil {
+		return fmt.Errorf("removendo documento: %w", err)
+	}
+	return nil
+}
+
 type linhaPg interface {
 	Scan(dest ...any) error
 }

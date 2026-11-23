@@ -34,6 +34,14 @@ type DocumentoRepository interface {
 	Salvar(ctx context.Context, d domain.Documento) error
 	BuscarPorID(ctx context.Context, id uuid.UUID) (domain.Documento, error)
 	Listar(ctx context.Context, filtro domain.FiltroDocumentos) ([]domain.Documento, error)
+	Remover(ctx context.Context, id uuid.UUID) error
+}
+
+// ProntuarioGateway é a porta de saída para o prontuario-service: a seta
+// "anexar" do diagrama de microsserviços. É por ela que este serviço atua
+// como CONSUMIDOR (cliente HTTP em adapters/prontuario).
+type ProntuarioGateway interface {
+	AnexarDocumento(ctx context.Context, d domain.Documento) error
 }
 
 // ArmazenamentoArquivos guarda o conteúdo binário. O ArmazenamentoS3 do

@@ -23,6 +23,7 @@ const tamanhoMaxNome = 255
 type Documentos struct {
 	repo          ports.DocumentoRepository
 	armazenamento ports.ArmazenamentoArquivos
+	prontuario    ports.ProntuarioGateway
 	tamanhoMax    int64
 	agora         func() time.Time
 }
@@ -33,12 +34,19 @@ var (
 )
 
 // NovoDocumentos cria o serviço; tamanhoMaxBytes limita cada arquivo.
-func NovoDocumentos(repo ports.DocumentoRepository, armazenamento ports.ArmazenamentoArquivos, tamanhoMaxBytes int64) *Documentos {
-	return &Documentos{repo: repo, armazenamento: armazenamento, tamanhoMax: tamanhoMaxBytes, agora: time.Now}
+func NovoDocumentos(repo ports.DocumentoRepository, armazenamento ports.ArmazenamentoArquivos,
+	prontuario ports.ProntuarioGateway, tamanhoMaxBytes int64) *Documentos {
+	return &Documentos{repo: repo, armazenamento: armazenamento, prontuario: prontuario,
+		tamanhoMax: tamanhoMaxBytes, agora: time.Now}
 }
 
-// Enviar grava o arquivo no armazenamento e depois os metadados no banco. Se
-// o banco falhar, remove o arquivo para não deixar objeto órfão no S3.
+// Enviar faz o upload em três passos:
+//  1. grava o arquivo no armazenamento (S3);
+//  2. grava os metadados no banco;
+//  3. anexa o documento ao prontuário do paciente (chamada ao prontuario-service).
+//
+// Se um passo falhar, os anteriores são desfeitos: um documento só existe
+// se estiver no prontuário, e não sobra arquivo órfão no S3.
 func (s *Documentos) Enviar(ctx context.Context, novo domain.NovoDocumento, conteudo io.Reader) (domain.Documento, error) {
 	novo.NomeOriginal = limparNome(novo.NomeOriginal)
 	if err := s.validar(novo); err != nil {
@@ -63,11 +71,15 @@ func (s *Documentos) Enviar(ctx context.Context, novo domain.NovoDocumento, cont
 	if err := s.armazenamento.Salvar(ctx, doc.URI, conteudo, doc.TamanhoBytes, doc.ContentType); err != nil {
 		return domain.Documento{}, err
 	}
+	// Desfazer usa um contexto que não é cancelado junto com a requisição.
+	limpeza := context.WithoutCancel(ctx)
+
 	if err := s.repo.Salvar(ctx, doc); err != nil {
-		if errRemover := s.armazenamento.Remover(context.WithoutCancel(ctx), doc.URI); errRemover != nil {
-			return domain.Documento{}, errors.Join(err, errRemover)
-		}
-		return domain.Documento{}, err
+		return domain.Documento{}, errors.Join(err, s.armazenamento.Remover(limpeza, doc.URI))
+	}
+	if err := s.prontuario.AnexarDocumento(ctx, doc); err != nil {
+		errDesfazer := errors.Join(s.repo.Remover(limpeza, doc.ID), s.armazenamento.Remover(limpeza, doc.URI))
+		return domain.Documento{}, fmt.Errorf("%w: %w", domain.ErrProntuarioIndisponivel, errors.Join(err, errDesfazer))
 	}
 	return doc, nil
 }

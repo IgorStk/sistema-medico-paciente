@@ -26,6 +26,9 @@ var (
 	ErrNaoEncontrado       = errors.New("documento não encontrado")
 	ErrArquivoMuitoGrande  = errors.New("arquivo maior que o limite permitido")
 	ErrFormatoNaoPermitido = errors.New("formato de arquivo não permitido (use PDF, JPEG, PNG ou WEBP)")
+	// ErrProntuarioIndisponivel: o prontuario-service não confirmou o anexo,
+	// então o upload foi desfeito.
+	ErrProntuarioIndisponivel = errors.New("não foi possível anexar o documento ao prontuário; tente novamente")
 )
 
 // ErroValidacao indica dados de entrada inválidos (vira HTTP 400).

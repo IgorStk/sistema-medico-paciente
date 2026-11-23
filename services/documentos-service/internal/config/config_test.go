@@ -58,3 +58,15 @@ func TestLoadS3Endpoint(t *testing.T) {
 		t.Error("esperava erro para endpoint sem http://")
 	}
 }
+
+func TestLoadProntuarioURL(t *testing.T) {
+	t.Setenv("PRONTUARIO_SERVICE_URL", "")
+	cfg, err := Load()
+	if err != nil || cfg.ProntuarioServiceURL != "http://localhost:8082" {
+		t.Errorf("padrão = %q, %v", cfg.ProntuarioServiceURL, err)
+	}
+	t.Setenv("PRONTUARIO_SERVICE_URL", "prontuario:8082")
+	if _, err := Load(); err == nil {
+		t.Error("esperava erro para URL sem http://")
+	}
+}

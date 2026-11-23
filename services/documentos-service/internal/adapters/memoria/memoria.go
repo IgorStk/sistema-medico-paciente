@@ -68,6 +68,42 @@ func (r *DocumentoRepository) Listar(_ context.Context, f domain.FiltroDocumento
 	return docs, nil
 }
 
+func (r *DocumentoRepository) Remover(_ context.Context, id uuid.UUID) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.docs, id)
+	return nil
+}
+
+// Prontuario implementa ports.ProntuarioGateway em memória: guarda os
+// documentos anexados por paciente.
+type Prontuario struct {
+	mu     sync.Mutex
+	anexos map[uuid.UUID][]uuid.UUID
+	Falhar error // se definido, AnexarDocumento devolve este erro
+}
+
+func NovoProntuario() *Prontuario {
+	return &Prontuario{anexos: make(map[uuid.UUID][]uuid.UUID)}
+}
+
+func (p *Prontuario) AnexarDocumento(_ context.Context, d domain.Documento) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.Falhar != nil {
+		return p.Falhar
+	}
+	p.anexos[d.PacienteID] = append(p.anexos[d.PacienteID], d.ID)
+	return nil
+}
+
+// Anexos devolve os documentos anexados ao prontuário do paciente.
+func (p *Prontuario) Anexos(pacienteID uuid.UUID) []uuid.UUID {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return slices.Clone(p.anexos[pacienteID])
+}
+
 // Armazenamento implementa ports.ArmazenamentoArquivos em memória.
 type Armazenamento struct {
 	mu       sync.Mutex

@@ -14,6 +14,7 @@ import (
 
 	"documentos-service/internal/adapters/httpapi"
 	"documentos-service/internal/adapters/postgres"
+	"documentos-service/internal/adapters/prontuario"
 	"documentos-service/internal/adapters/s3"
 	"documentos-service/internal/config"
 	"documentos-service/internal/servico"
@@ -58,12 +59,14 @@ func executar(log *slog.Logger) error {
 
 	// Casos de uso e API
 	tamanhoMax := cfg.TamanhoMaxUploadMB << 20
-	documentos := servico.NovoDocumentos(postgres.NovoDocumentoRepository(pool), armazenamento, tamanhoMax)
+	clienteProntuario := prontuario.NovoCliente(cfg.ProntuarioServiceURL)
+	documentos := servico.NovoDocumentos(postgres.NovoDocumentoRepository(pool), armazenamento, clienteProntuario, tamanhoMax)
 	handler := httpapi.NovoHandler(httpapi.Dependencias{
 		Servico:               nomeServico,
 		Log:                   log,
 		Banco:                 pool,
 		Armazenamento:         armazenamento,
+		Prontuario:            clienteProntuario,
 		Upload:                documentos,
 		Download:              documentos,
 		TamanhoMaxUploadBytes: tamanhoMax,
@@ -77,7 +80,7 @@ func executar(log *slog.Logger) error {
 
 	erros := make(chan error, 1)
 	go func() {
-		log.Info("servidor HTTP ouvindo", "porta", cfg.Porta)
+		log.Info("servidor HTTP ouvindo", "porta", cfg.Porta, "prontuario_service", cfg.ProntuarioServiceURL)
 		if err := servidor.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			erros <- err
 		}

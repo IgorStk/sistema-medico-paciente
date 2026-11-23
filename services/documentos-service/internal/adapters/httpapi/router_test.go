@@ -22,12 +22,13 @@ const limiteTeste = 1 << 20 // 1 MB
 
 // novoRouterTeste monta o router com o serviço real e adaptadores em memória.
 func novoRouterTeste(errBanco, errArmazenamento error) http.Handler {
-	svc := servico.NovoDocumentos(memoria.NovoDocumentoRepository(), memoria.NovoArmazenamento(), limiteTeste)
+	svc := servico.NovoDocumentos(memoria.NovoDocumentoRepository(), memoria.NovoArmazenamento(), memoria.NovoProntuario(), limiteTeste)
 	h := NovoHandler(Dependencias{
 		Servico:               "documentos-service",
 		Log:                   slog.New(slog.NewTextHandler(io.Discard, nil)),
 		Banco:                 pingerFalso{errBanco},
 		Armazenamento:         pingerFalso{errArmazenamento},
+		Prontuario:            pingerFalso{},
 		Upload:                svc,
 		Download:              svc,
 		TamanhoMaxUploadBytes: limiteTeste,

@@ -175,6 +175,9 @@ func (h *Handler) responderErro(w http.ResponseWriter, err error) {
 			fmt.Sprintf("%s (máximo %d MB)", err.Error(), h.TamanhoMaxUploadBytes>>20))
 	case errors.Is(err, domain.ErrFormatoNaoPermitido):
 		escreverErro(w, http.StatusUnsupportedMediaType, err.Error())
+	case errors.Is(err, domain.ErrProntuarioIndisponivel):
+		h.Log.Warn("upload desfeito: prontuário não confirmou o anexo", "erro", err)
+		escreverErro(w, http.StatusBadGateway, domain.ErrProntuarioIndisponivel.Error())
 	default:
 		h.Log.Error("erro interno", "erro", err)
 		escreverErro(w, http.StatusInternalServerError, "erro interno")

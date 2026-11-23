@@ -15,6 +15,8 @@ type Config struct {
 	CORSOrigens        []string
 	TamanhoMaxUploadMB int64
 	S3                 S3
+	// ProntuarioServiceURL é onde o documento é anexado depois do upload.
+	ProntuarioServiceURL string
 }
 
 // S3 configura o armazenamento dos arquivos. Os padrões apontam para o S3
@@ -49,6 +51,11 @@ func Load() (Config, error) {
 		Bucket:    env("S3_BUCKET", "documentos"),
 		Regiao:    env("S3_REGION", "us-east-1"),
 	}
+	cfg.ProntuarioServiceURL = strings.TrimRight(env("PRONTUARIO_SERVICE_URL", "http://localhost:8082"), "/")
+	if u, err := url.Parse(cfg.ProntuarioServiceURL); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return Config{}, fmt.Errorf("PRONTUARIO_SERVICE_URL inválida: %q", cfg.ProntuarioServiceURL)
+	}
+
 	u, err := url.Parse(cfg.S3.Endpoint)
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 		return Config{}, fmt.Errorf("S3_ENDPOINT deve ser uma URL completa (http:// ou https://), veio %q", cfg.S3.Endpoint)

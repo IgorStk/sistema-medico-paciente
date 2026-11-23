@@ -72,21 +72,22 @@ function Start-ServicoGo([string]$nome, [hashtable]$ambiente) {
 $cors = if ($vars['CORS_ORIGINS']) { $vars['CORS_ORIGINS'] } else { 'http://localhost:5173,http://localhost:3000' }
 $bucket = if ($vars['DOCUMENTOS_S3_BUCKET']) { $vars['DOCUMENTOS_S3_BUCKET'] } else { 'documentos' }
 
-$documentos = Start-ServicoGo 'documentos-service' @{
-    PORT          = '8081'
-    DATABASE_URL  = $vars['DOCUMENTOS_DATABASE_URL']
-    CORS_ORIGINS  = $cors
-    S3_ENDPOINT   = $vars['DOCUMENTOS_S3_ENDPOINT']
-    S3_REGION     = $vars['DOCUMENTOS_S3_REGION']
-    S3_ACCESS_KEY = $vars['DOCUMENTOS_S3_ACCESS_KEY']
-    S3_SECRET_KEY = $vars['DOCUMENTOS_S3_SECRET_KEY']
-    S3_BUCKET     = $bucket
-}
+# O prontuario sobe primeiro: o documentos-service chama ele a cada upload.
 $prontuario = Start-ServicoGo 'prontuario-service' @{
-    PORT                   = '8082'
-    DATABASE_URL           = $vars['PRONTUARIO_DATABASE_URL']
+    PORT         = '8082'
+    DATABASE_URL = $vars['PRONTUARIO_DATABASE_URL']
+    CORS_ORIGINS = $cors
+}
+$documentos = Start-ServicoGo 'documentos-service' @{
+    PORT                   = '8081'
+    DATABASE_URL           = $vars['DOCUMENTOS_DATABASE_URL']
     CORS_ORIGINS           = $cors
-    DOCUMENTOS_SERVICE_URL = 'http://localhost:8081'
+    S3_ENDPOINT            = $vars['DOCUMENTOS_S3_ENDPOINT']
+    S3_REGION              = $vars['DOCUMENTOS_S3_REGION']
+    S3_ACCESS_KEY          = $vars['DOCUMENTOS_S3_ACCESS_KEY']
+    S3_SECRET_KEY          = $vars['DOCUMENTOS_S3_SECRET_KEY']
+    S3_BUCKET              = $bucket
+    PRONTUARIO_SERVICE_URL = 'http://localhost:8082'
 }
 
 Write-Host ""

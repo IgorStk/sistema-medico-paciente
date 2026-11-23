@@ -21,6 +21,7 @@ type Dependencias struct {
 	Log                   *slog.Logger
 	Banco                 Pinger
 	Armazenamento         Pinger
+	Prontuario            Pinger // só informativo no /health
 	Upload                ports.DocumentoUploadPort
 	Download              ports.DocumentoDownloadPort
 	TamanhoMaxUploadBytes int64
@@ -48,18 +49,25 @@ func NovoRouter(h *Handler, origensCORS []string) http.Handler {
 }
 
 type statusResposta struct {
-	Status        string `json:"status"`
-	Servico       string `json:"servico"`
-	Banco         string `json:"banco"`
-	Armazenamento string `json:"armazenamento"`
+	Status        string            `json:"status"`
+	Servico       string            `json:"servico"`
+	Banco         string            `json:"banco"`
+	Armazenamento string            `json:"armazenamento"`
+	Dependencias  map[string]string `json:"dependencias"`
 }
 
-// health responde 503 se o banco ou o armazenamento estiverem fora.
+// health responde 503 se o banco ou o armazenamento estiverem fora. O
+// prontuario-service aparece em "dependencias", mas não derruba o status:
+// consultas e downloads continuam funcionando sem ele.
 func (h *Handler) health(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 
-	resp := statusResposta{Status: "ok", Servico: h.Servico, Banco: "ok", Armazenamento: "ok"}
+	resp := statusResposta{Status: "ok", Servico: h.Servico, Banco: "ok", Armazenamento: "ok",
+		Dependencias: map[string]string{"prontuario-service": "ok"}}
+	if err := h.Prontuario.Ping(ctx); err != nil {
+		resp.Dependencias["prontuario-service"] = "indisponivel"
+	}
 	if err := h.Banco.Ping(ctx); err != nil {
 		resp.Status, resp.Banco = "degradado", "indisponivel"
 	}

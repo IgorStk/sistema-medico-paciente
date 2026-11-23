@@ -15,10 +15,41 @@ import (
 
 const limite = 1 << 20 // 1 MB
 
+// prontuarioTeste é o falso do prontuario-service usado pelo último novoServicoTeste.
+var prontuarioTeste *memoria.Prontuario
+
 func novoServicoTeste() (*Documentos, *memoria.DocumentoRepository, *memoria.Armazenamento) {
 	repo := memoria.NovoDocumentoRepository()
 	arm := memoria.NovoArmazenamento()
-	return NovoDocumentos(repo, arm, limite), repo, arm
+	prontuarioTeste = memoria.NovoProntuario()
+	return NovoDocumentos(repo, arm, prontuarioTeste, limite), repo, arm
+}
+
+func TestEnviarAnexaAoProntuario(t *testing.T) {
+	s, _, _ := novoServicoTeste()
+	n := novoValido()
+	doc, err := s.Enviar(context.Background(), n, strings.NewReader("%PDF-1.4\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if anexos := prontuarioTeste.Anexos(n.PacienteID); len(anexos) != 1 || anexos[0] != doc.ID {
+		t.Errorf("anexos no prontuário = %v, quer [%v]", anexos, doc.ID)
+	}
+}
+
+func TestEnviarDesfazTudoSeProntuarioFalhar(t *testing.T) {
+	s, repo, arm := novoServicoTeste()
+	prontuarioTeste.Falhar = errors.New("prontuario-service fora do ar")
+	n := novoValido()
+
+	_, err := s.Enviar(context.Background(), n, strings.NewReader("%PDF-1.4\n"))
+	if !errors.Is(err, domain.ErrProntuarioIndisponivel) {
+		t.Fatalf("erro = %v, quer ErrProntuarioIndisponivel", err)
+	}
+	docs, _ := repo.Listar(context.Background(), domain.FiltroDocumentos{PacienteID: &n.PacienteID})
+	if len(docs) != 0 || arm.Total() != 0 {
+		t.Errorf("sobrou lixo: %d metadados, %d arquivos", len(docs), arm.Total())
+	}
 }
 
 func novoValido() domain.NovoDocumento {

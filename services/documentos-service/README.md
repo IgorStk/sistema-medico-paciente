@@ -6,12 +6,25 @@ receitas e atestados. Implementa as portas `DocumentoUploadPort` e
 
 - **Arquivos:** ficam no S3 (`ArmazenamentoS3`, com o SDK oficial da AWS). Em produção é o Supabase Storage, pela API compatível com S3; no docker-compose local é o SeaweedFS. O Amazon S3 também funciona, só mudando a configuração.
 - **Metadados:** ficam no banco próprio `documentos_db` (Postgres).
+- **Consumidor do prontuário:** depois de cada upload, o serviço chama o
+  prontuario-service para anexar o documento ao prontuário do paciente (seta
+  "anexar" do diagrama de microsserviços).
+
+### Como funciona o upload
+
+1. O arquivo é gravado no S3.
+2. Os metadados são gravados no `documentos_db`.
+3. O documento é anexado ao prontuário (`POST /pacientes/{pacienteId}/prontuario/documentos` no prontuario-service).
+
+Se um passo falha, os anteriores são desfeitos. Assim, um documento só existe
+se estiver no prontuário, e não sobra arquivo órfão no S3. Se o prontuário
+estiver fora do ar, o upload responde `502` e pode ser repetido.
 
 ## Endpoints
 
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/health` | Saúde do serviço, do banco e do S3 |
+| GET | `/health` | Saúde do serviço, do banco e do S3 (e, em `dependencias`, do prontuario-service) |
 | POST | `/documentos` | Upload (multipart, campos abaixo) → `201` com o documento |
 | GET | `/documentos?pacienteId=&consultaId=&tipo=` | Lista metadados (exige `pacienteId` ou `consultaId`) |
 | GET | `/documentos/{id}` | Metadados de um documento |
@@ -62,6 +75,7 @@ Os erros vêm sempre no formato `{"erro": "mensagem"}`.
 | 404 | documento não existe |
 | 413 | arquivo maior que o limite |
 | 415 | formato não permitido |
+| 502 | o prontuario-service não confirmou o anexo (o upload foi desfeito) |
 
 ## Variáveis de ambiente
 
@@ -75,6 +89,7 @@ Os erros vêm sempre no formato `{"erro": "mensagem"}`.
 | `S3_ACCESS_KEY` / `S3_SECRET_KEY` | credenciais de desenvolvimento do `dev/seaweedfs-s3.json` |
 | `S3_BUCKET` | `documentos` (criado automaticamente na subida) |
 | `S3_REGION` | `us-east-1` |
+| `PRONTUARIO_SERVICE_URL` | `http://localhost:8082` |
 
 ## Estrutura (arquitetura hexagonal)
 
@@ -87,13 +102,11 @@ internal/adapters/
   httpapi/               API REST, CORS, logs
   postgres/              repositório e migrações (migrations/*.sql)
   s3/                    ArmazenamentoS3
-  memoria/               repositório e armazenamento em memória (testes)
+  prontuario/            cliente HTTP do prontuario-service (anexar)
+  memoria/               repositório, armazenamento e prontuário em memória (testes)
 internal/config/         variáveis de ambiente
 dev/                     configuração do S3 local
 ```
-
-Se o banco falhar depois que o arquivo já foi para o S3, o serviço remove o
-arquivo. Assim não sobra objeto órfão no S3.
 
 ## Rodando
 

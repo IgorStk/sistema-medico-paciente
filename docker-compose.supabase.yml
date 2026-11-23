@@ -17,11 +17,11 @@ services:
       S3_ACCESS_KEY: ${DOCUMENTOS_S3_ACCESS_KEY:?defina DOCUMENTOS_S3_ACCESS_KEY no .env}
       S3_SECRET_KEY: ${DOCUMENTOS_S3_SECRET_KEY:?defina DOCUMENTOS_S3_SECRET_KEY no .env}
       S3_BUCKET: ${DOCUMENTOS_S3_BUCKET:-documentos}
-    depends_on: !reset {}
+    depends_on: !override
+      prontuario-service:
+        condition: service_started
 
   prontuario-service:
     environment:
       DATABASE_URL: ${PRONTUARIO_DATABASE_URL:?defina PRONTUARIO_DATABASE_URL no .env}
-    depends_on: !override
-      documentos-service:
-        condition: service_started
+    depends_on: !reset {}
