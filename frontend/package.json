@@ -1,8 +1,19 @@
 {
   "name": "frontend",
   "private": true,
-  "description": "Painel de teste: npm run dev serve a página em http://localhost:5173",
+  "type": "module",
+  "description": "Frontend do sistema (React + Vite): npm run dev abre em http://localhost:5173",
   "scripts": {
-    "dev": "node servidor.mjs"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.3.0",
+    "vite": "^8.3.8"
   }
 }

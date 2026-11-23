@@ -45,7 +45,7 @@ services/
   documentos-service/   Go: upload, consulta e download de documentos (anexa ao prontuário)
   prontuario-service/   Go: prontuário, histórico e laudos
 scripts/rodar-supabase.ps1  roda os serviços Go sem Docker (chamado pelo npm run dev de services/)
-frontend/               página única para testar os serviços Go pela tela
+frontend/               React + Vite: tela que conecta os serviços
 docker-compose*.yml     alternativa com Docker (opcional)
 go.work                 workspace Go (para o VSCode/gopls enxergar os dois módulos)
 ```
@@ -56,7 +56,7 @@ Os bancos ficam no **Supabase**: um projeto por serviço (`documentos` e
 `prontuario`). Os arquivos ficam no **Supabase Storage** do projeto
 `documentos`. Nada de banco roda na sua máquina.
 
-Pré-requisitos: [Go](https://go.dev/dl/) 1.27+ e [Node.js](https://nodejs.org/) (só pelo `npm run dev`).
+Pré-requisitos: [Go](https://go.dev/dl/) 1.27+ e [Node.js](https://nodejs.org/).
 
 1. Copie `.env.example` para `.env` e preencha com as URLs e chaves do Supabase.
    O `.env` não vai para o Git: peça os valores a quem cuida dos serviços em Go.
@@ -65,7 +65,7 @@ Pré-requisitos: [Go](https://go.dev/dl/) 1.27+ e [Node.js](https://nodejs.org/)
 | Terminal | Pasta | Comando | O que sobe |
 |---|---|---|---|
 | 1 (API) | `services` | `npm run dev` | documentos-service em http://localhost:8081 e prontuario-service em http://localhost:8082 |
-| 2 (front) | `frontend` | `npm run dev` | painel de teste em **http://localhost:5173** |
+| 2 (front) | `frontend` | `npm install` (só na 1ª vez) e `npm run dev` | frontend em **http://localhost:5173** |
 
 Ctrl+C para cada um. Na primeira vez, a API demora um pouco para compilar.
 As tabelas e o bucket são criados automaticamente na primeira subida.
@@ -73,19 +73,12 @@ As tabelas e o bucket são criados automaticamente na primeira subida.
 Para ver os dados, use o painel do Supabase: **Table Editor** para as tabelas e
 **Storage** para os arquivos.
 
-### Painel de teste (frontend mínimo)
+### Frontend
 
-[`frontend/index.html`](frontend/index.html) é uma página única,
-sem build e sem dependências, para testar os serviços Go pela tela. Ela permite:
-
-- gerar IDs fictícios de paciente, médico e consulta;
-- enviar um documento (que é anexado ao prontuário);
-- emitir um laudo;
-- ver o histórico e os documentos de uma consulta;
-- abrir os arquivos.
-
-Ela precisa ser aberta por http://localhost:5173: abrir o arquivo direto
-(`file://`) não funciona por causa do CORS.
+O [`frontend/`](frontend) é feito em React + Vite. Hoje ele tem as telas de
+documentos e prontuário: gerar IDs fictícios, enviar documento, emitir laudo,
+ver o histórico e abrir os arquivos. A estrutura e como integrar outros
+serviços estão em [`frontend/README.md`](frontend/README.md).
 
 ### Alternativa com Docker (opcional)
 
