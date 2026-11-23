@@ -1,0 +1,9 @@
+[project]
+name = "especialidades-service"
+version = "0.1.0"
+description = "Especialidades médicas: configuração (prompt base, documentos esperados) e cálculo de exames faltantes"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
