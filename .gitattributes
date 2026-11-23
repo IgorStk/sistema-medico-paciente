@@ -1,0 +1,8 @@
+# Mantém finais de linha LF no repositório (evita problemas com scripts e SQL dentro do Docker)
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.png binary
+*.jpg binary
+*.pdf binary

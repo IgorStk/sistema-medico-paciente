@@ -1,0 +1,70 @@
+# Sobe todos os microsserviços do sistema. Cada serviço tem o seu próprio banco.
+# Uso: docker compose up --build
+# Cada integrante adiciona aqui os seus serviços e bancos.
+name: sistema-medico-paciente
+
+services:
+  # ---------- Prontuário e Documentos (Go) ----------
+  documentos-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: documentos_db
+      POSTGRES_USER: documentos
+      POSTGRES_PASSWORD: documentos
+    ports:
+      - "5433:5432"
+    volumes:
+      - documentos-db-dados:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U documentos -d documentos_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  documentos-service:
+    build: ./services/documentos-service
+    environment:
+      PORT: "8081"
+      DATABASE_URL: postgres://documentos:documentos@documentos-db:5432/documentos_db?sslmode=disable
+      CORS_ORIGINS: http://localhost:5173
+      MAX_UPLOAD_MB: "20"
+    ports:
+      - "8081:8081"
+    depends_on:
+      documentos-db:
+        condition: service_healthy
+
+  prontuario-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: prontuario_db
+      POSTGRES_USER: prontuario
+      POSTGRES_PASSWORD: prontuario
+    ports:
+      - "5434:5432"
+    volumes:
+      - prontuario-db-dados:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prontuario -d prontuario_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  prontuario-service:
+    build: ./services/prontuario-service
+    environment:
+      PORT: "8082"
+      DATABASE_URL: postgres://prontuario:prontuario@prontuario-db:5432/prontuario_db?sslmode=disable
+      CORS_ORIGINS: http://localhost:5173
+      DOCUMENTOS_SERVICE_URL: http://documentos-service:8081
+    ports:
+      - "8082:8082"
+    depends_on:
+      prontuario-db:
+        condition: service_healthy
+      documentos-service:
+        condition: service_started
+
+volumes:
+  documentos-db-dados:
+  prontuario-db-dados:

@@ -1,0 +1,32 @@
+# Binários e artefatos de build
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+bin/
+dist/
+build/
+
+# Go
+*.out
+coverage.*
+go.work.sum
+
+# Node / frontend
+node_modules/
+.vite/
+
+# Ambiente e segredos (use .env.example)
+.env
+.env.*
+!.env.example
+
+# IDEs e sistema
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,71 @@
+// Package domain contém as entidades do serviço de documentos (Documento e
+// TipoDocumento do diagrama de classes). Não depende de banco, HTTP nem S3.
+package domain
+
+import (
+	"errors"
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+// TipoDocumento corresponde à enumeração TipoDocumento do diagrama.
+type TipoDocumento string
+
+const (
+	TipoExamePrevio TipoDocumento = "EXAME_PREVIO"
+	TipoLaudo       TipoDocumento = "LAUDO"
+	TipoReceita     TipoDocumento = "RECEITA"
+	TipoAtestado    TipoDocumento = "ATESTADO"
+)
+
+var (
+	ErrTipoInvalido  = errors.New("tipo de documento inválido")
+	ErrNaoEncontrado = errors.New("documento não encontrado")
+)
+
+// ParseTipoDocumento converte texto (sem diferenciar maiúsculas) em TipoDocumento.
+func ParseTipoDocumento(s string) (TipoDocumento, error) {
+	t := TipoDocumento(strings.ToUpper(strings.TrimSpace(s)))
+	switch t {
+	case TipoExamePrevio, TipoLaudo, TipoReceita, TipoAtestado:
+		return t, nil
+	}
+	return "", fmt.Errorf("%w: %q", ErrTipoInvalido, s)
+}
+
+// Documento é um arquivo clínico (exame, laudo, receita ou atestado) de um paciente.
+type Documento struct {
+	ID           uuid.UUID     `json:"id"`
+	Tipo         TipoDocumento `json:"tipo"`
+	PacienteID   uuid.UUID     `json:"pacienteId"`
+	ConsultaID   *uuid.UUID    `json:"consultaId,omitempty"`
+	AutorID      uuid.UUID     `json:"autorId"`
+	NomeOriginal string        `json:"nomeOriginal"`
+	ContentType  string        `json:"contentType"`
+	TamanhoBytes int64         `json:"tamanhoBytes"`
+	// URI é a chave do arquivo no armazenamento (atributo "uri" do diagrama).
+	// Não sai na API: o download passa sempre pelo serviço.
+	URI       string    `json:"-"`
+	EnviadoEm time.Time `json:"enviadoEm"`
+}
+
+// NovoDocumento são os dados informados em um upload.
+type NovoDocumento struct {
+	Tipo         TipoDocumento
+	PacienteID   uuid.UUID
+	ConsultaID   *uuid.UUID
+	AutorID      uuid.UUID
+	NomeOriginal string
+	ContentType  string
+	TamanhoBytes int64
+}
+
+// FiltroDocumentos restringe uma listagem; campos nil não filtram.
+type FiltroDocumentos struct {
+	PacienteID *uuid.UUID
+	ConsultaID *uuid.UUID
+	Tipo       *TipoDocumento
+}
