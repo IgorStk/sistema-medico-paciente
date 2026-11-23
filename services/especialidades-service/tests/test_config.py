@@ -29,3 +29,8 @@ def test_vazio_usa_padrao():
 def test_porta_invalida(porta):
     with pytest.raises(ValueError):
         carregar({"PORT": porta})
+
+
+def test_modo_memoria():
+    assert carregar({"DATABASE_URL": " Memoria "}).usa_memoria
+    assert not carregar({}).usa_memoria

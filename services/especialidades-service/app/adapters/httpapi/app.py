@@ -7,14 +7,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.ports import VerificadorBanco
+from app.servico.especialidades import ServicoEspecialidades
 
-from . import erros, middleware, rotas_health
+from . import erros, middleware, rotas_especialidades, rotas_health
 
 
 @dataclass
 class Dependencias:
     servico: str
     banco: VerificadorBanco
+    especialidades: ServicoEspecialidades
     log: logging.Logger
 
 
@@ -27,6 +29,7 @@ def criar_app(dep: Dependencias, cors_origens: list[str]) -> FastAPI:
     app.state.dep = dep
 
     app.include_router(rotas_health.router)
+    app.include_router(rotas_especialidades.router)
     erros.registrar(app, dep.log)
 
     # Ordem: o último middleware adicionado é o mais externo.

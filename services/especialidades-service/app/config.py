@@ -11,6 +11,11 @@ class Config:
     database_url: str = "postgres://especialidades:especialidades@localhost:5435/especialidades_db?sslmode=disable"
     cors_origens: list[str] = field(default_factory=lambda: ["http://localhost:5173"])
 
+    @property
+    def usa_memoria(self) -> bool:
+        """DATABASE_URL=memoria roda sem Postgres (dados somem ao reiniciar)."""
+        return self.database_url.strip().lower() == "memoria"
+
 
 def carregar(ambiente: Mapping[str, str] | None = None) -> Config:
     """Lê as variáveis de ambiente. Os valores padrão servem para rodar localmente."""

@@ -30,7 +30,7 @@ armazenamento.
 | Vitor Brito | Java (Spring Boot) | `agendamento` | agendar, cancelar e remarcar consulta, listar agenda do médico no dia, verificar disponibilidade, confirmar consulta | PostgreSQL (consultas) | a definir |
 | Vitor Brito | Java (Spring Boot) | `notificacao` | notificar por e-mail, push ou WhatsApp, listar mensagens enviadas a um usuário | SMTP · Firebase Push · WhatsApp API | a definir |
 | Michael David | Python (FastAPI) | `triagem` | solicitar triagem de uma consulta, gerar sugestão (resumo clínico, rascunho de conduta, exames faltantes) | Provedor de IA externo (API LLM) | a definir |
-| Michael David | Python (FastAPI) | `especialidades` | listar especialidades, consultar/atualizar configuração (prompt base, documentos esperados), calcular exames faltantes | PostgreSQL (config. especialidade) | a definir |
+| Michael David | Python (FastAPI) | [`especialidades`](services/especialidades-service) | listar especialidades, consultar/atualizar configuração (prompt base, documentos esperados), calcular exames faltantes | PostgreSQL `especialidades_db` (config. especialidade) | 8083 |
 | Igor Roberto | Go | [`documentos`](services/documentos-service) | enviar documento (exame prévio, laudo, receita, atestado), baixar documento, listar documentos da consulta | Amazon S3 (arquivos) + PostgreSQL `documentos_db` (metadados, 5433) | 8081 |
 | Igor Roberto | Go | [`prontuario`](services/prontuario-service) | anexar documento ao prontuário, consultar histórico clínico do paciente, emitir laudo | PostgreSQL `prontuario_db` (5434) | 8082 |
 | Equipe | React / Next.js | `frontend` | AppPaciente (entrar, agendar consulta, enviar exame prévio) e AppMedico (ver agenda, ver exames, triar, emitir laudo) | — | a definir |
@@ -44,6 +44,7 @@ para o serviço certo.
 services/
   documentos-service/   Go: upload, consulta e download de documentos (anexa ao prontuário)
   prontuario-service/   Go: prontuário, histórico e laudos
+  especialidades-service/  Python: especialidades, configuração da triagem e exames faltantes
 scripts/rodar-supabase.ps1  roda os serviços Go sem Docker (chamado pelo npm run dev de services/)
 frontend/               React + Vite: tela que conecta os serviços
 docker-compose*.yml     alternativa com Docker (opcional)
