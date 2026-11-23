@@ -22,9 +22,25 @@ const (
 )
 
 var (
-	ErrTipoInvalido  = errors.New("tipo de documento inválido")
-	ErrNaoEncontrado = errors.New("documento não encontrado")
+	ErrTipoInvalido        = errors.New("tipo de documento inválido")
+	ErrNaoEncontrado       = errors.New("documento não encontrado")
+	ErrArquivoMuitoGrande  = errors.New("arquivo maior que o limite permitido")
+	ErrFormatoNaoPermitido = errors.New("formato de arquivo não permitido (use PDF, JPEG, PNG ou WEBP)")
 )
+
+// ErroValidacao indica dados de entrada inválidos (vira HTTP 400).
+type ErroValidacao struct{ Mensagem string }
+
+func (e *ErroValidacao) Error() string { return e.Mensagem }
+
+// FormatosPermitidos são os content types aceitos no upload. O tipo é
+// detectado pelo conteúdo do arquivo, não pela extensão informada.
+var FormatosPermitidos = map[string]bool{
+	"application/pdf": true,
+	"image/jpeg":      true,
+	"image/png":       true,
+	"image/webp":      true,
+}
 
 // ParseTipoDocumento converte texto (sem diferenciar maiúsculas) em TipoDocumento.
 func ParseTipoDocumento(s string) (TipoDocumento, error) {

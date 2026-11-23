@@ -42,3 +42,19 @@ func TestLoadRejeitaTamanhoInvalido(t *testing.T) {
 		t.Fatal("esperava erro para MAX_UPLOAD_MB inválido")
 	}
 }
+
+func TestLoadS3Endpoint(t *testing.T) {
+	t.Setenv("S3_ENDPOINT", "https://abc.storage.supabase.co/storage/v1/s3/")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.S3.Endpoint != "https://abc.storage.supabase.co/storage/v1/s3" {
+		t.Errorf("Endpoint = %q", cfg.S3.Endpoint)
+	}
+
+	t.Setenv("S3_ENDPOINT", "localhost:8333")
+	if _, err := Load(); err == nil {
+		t.Error("esperava erro para endpoint sem http://")
+	}
+}

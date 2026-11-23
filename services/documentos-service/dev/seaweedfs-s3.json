@@ -1,0 +1,14 @@
+{
+  "identities": [
+    {
+      "name": "documentos-service",
+      "credentials": [
+        {
+          "accessKey": "documentos",
+          "secretKey": "documentos-segredo-dev"
+        }
+      ],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}

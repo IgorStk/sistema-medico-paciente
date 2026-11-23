@@ -14,7 +14,9 @@ import (
 
 	"documentos-service/internal/adapters/httpapi"
 	"documentos-service/internal/adapters/postgres"
+	"documentos-service/internal/adapters/s3"
 	"documentos-service/internal/config"
+	"documentos-service/internal/servico"
 )
 
 const nomeServico = "documentos-service"
@@ -36,20 +38,40 @@ func executar(log *slog.Logger) error {
 	ctx, parar := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer parar()
 
+	// Banco de metadados
 	pool, err := postgres.Conectar(ctx, cfg.DatabaseURL)
 	if err != nil {
 		return err
 	}
 	defer pool.Close()
-
 	if err := postgres.Migrar(ctx, pool); err != nil {
 		return err
 	}
 	log.Info("banco conectado e migrações aplicadas")
 
+	// Armazenamento dos arquivos (S3)
+	armazenamento := s3.Novo(s3.Config(cfg.S3))
+	if err := armazenamento.GarantirBucket(ctx); err != nil {
+		return err
+	}
+	log.Info("armazenamento S3 pronto", "endpoint", cfg.S3.Endpoint, "bucket", cfg.S3.Bucket)
+
+	// Casos de uso e API
+	tamanhoMax := cfg.TamanhoMaxUploadMB << 20
+	documentos := servico.NovoDocumentos(postgres.NovoDocumentoRepository(pool), armazenamento, tamanhoMax)
+	handler := httpapi.NovoHandler(httpapi.Dependencias{
+		Servico:               nomeServico,
+		Log:                   log,
+		Banco:                 pool,
+		Armazenamento:         armazenamento,
+		Upload:                documentos,
+		Download:              documentos,
+		TamanhoMaxUploadBytes: tamanhoMax,
+	})
+
 	servidor := &http.Server{
 		Addr:              ":" + cfg.Porta,
-		Handler:           httpapi.NovoRouter(httpapi.NovoHandler(nomeServico, pool), cfg.CORSOrigens, log),
+		Handler:           httpapi.NovoRouter(handler, cfg.CORSOrigens),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

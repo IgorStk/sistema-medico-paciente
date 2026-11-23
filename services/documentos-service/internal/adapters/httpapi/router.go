@@ -6,53 +6,70 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"documentos-service/internal/ports"
 )
 
-// Pinger é satisfeito por *pgxpool.Pool; nos testes usamos um falso.
+// Pinger é satisfeito por *pgxpool.Pool e pelo ArmazenamentoS3.
 type Pinger interface {
 	Ping(ctx context.Context) error
 }
 
-type Handler struct {
-	servico string
-	banco   Pinger
+// Dependencias reúne o que os handlers precisam.
+type Dependencias struct {
+	Servico               string
+	Log                   *slog.Logger
+	Banco                 Pinger
+	Armazenamento         Pinger
+	Upload                ports.DocumentoUploadPort
+	Download              ports.DocumentoDownloadPort
+	TamanhoMaxUploadBytes int64
 }
 
-func NovoHandler(servico string, banco Pinger) *Handler {
-	return &Handler{servico: servico, banco: banco}
+type Handler struct {
+	Dependencias
+}
+
+func NovoHandler(d Dependencias) *Handler {
+	return &Handler{Dependencias: d}
 }
 
 // NovoRouter registra as rotas e aplica os middlewares.
-func NovoRouter(h *Handler, origensCORS []string, log *slog.Logger) http.Handler {
+func NovoRouter(h *Handler, origensCORS []string) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", h.health)
 
-	// API de documentos: implementada na fase 3 (upload e download).
-	mux.HandleFunc("POST /documentos", naoImplementado)
-	mux.HandleFunc("GET /documentos", naoImplementado)
-	mux.HandleFunc("GET /documentos/{id}", naoImplementado)
-	mux.HandleFunc("GET /documentos/{id}/arquivo", naoImplementado)
+	mux.HandleFunc("POST /documentos", h.enviar)
+	mux.HandleFunc("GET /documentos", h.listar)
+	mux.HandleFunc("GET /documentos/{id}", h.buscar)
+	mux.HandleFunc("GET /documentos/{id}/arquivo", h.baixar)
 
-	return recuperar(log, registrarRequisicao(log, cors(origensCORS, mux)))
+	return recuperar(h.Log, registrarRequisicao(h.Log, cors(origensCORS, mux)))
 }
 
 type statusResposta struct {
-	Status  string `json:"status"`
-	Servico string `json:"servico"`
-	Banco   string `json:"banco"`
+	Status        string `json:"status"`
+	Servico       string `json:"servico"`
+	Banco         string `json:"banco"`
+	Armazenamento string `json:"armazenamento"`
 }
 
+// health responde 503 se o banco ou o armazenamento estiverem fora.
 func (h *Handler) health(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 
-	if err := h.banco.Ping(ctx); err != nil {
-		escreverJSON(w, http.StatusServiceUnavailable, statusResposta{"degradado", h.servico, "indisponivel"})
-		return
+	resp := statusResposta{Status: "ok", Servico: h.Servico, Banco: "ok", Armazenamento: "ok"}
+	if err := h.Banco.Ping(ctx); err != nil {
+		resp.Status, resp.Banco = "degradado", "indisponivel"
 	}
-	escreverJSON(w, http.StatusOK, statusResposta{"ok", h.servico, "ok"})
-}
+	if err := h.Armazenamento.Ping(ctx); err != nil {
+		resp.Status, resp.Armazenamento = "degradado", "indisponivel"
+	}
 
-func naoImplementado(w http.ResponseWriter, _ *http.Request) {
-	escreverErro(w, http.StatusNotImplemented, "rota ainda não implementada")
+	status := http.StatusOK
+	if resp.Status != "ok" {
+		status = http.StatusServiceUnavailable
+	}
+	escreverJSON(w, status, resp)
 }

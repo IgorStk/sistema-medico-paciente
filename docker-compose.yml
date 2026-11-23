@@ -21,18 +21,38 @@ services:
       timeout: 3s
       retries: 10
 
+  # S3 local (SeaweedFS) no lugar do Amazon S3 durante o desenvolvimento.
+  documentos-s3:
+    image: chrislusf/seaweedfs:4.55
+    command: >
+      server -dir=/data -ip=documentos-s3 -ip.bind=0.0.0.0
+      -master.volumeSizeLimitMB=64 -volume.max=20
+      -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json
+    ports:
+      - "8333:8333"            # API S3 (exige credencial)
+      - "127.0.0.1:8888:8888"  # navegador de arquivos (sem senha: só nesta máquina)
+    volumes:
+      - documentos-s3-dados:/data
+      - ./services/documentos-service/dev/seaweedfs-s3.json:/etc/seaweedfs/s3.json:ro
+
   documentos-service:
     build: ./services/documentos-service
     environment:
       PORT: "8081"
       DATABASE_URL: postgres://documentos:documentos@documentos-db:5432/documentos_db?sslmode=disable
-      CORS_ORIGINS: http://localhost:5173
+      CORS_ORIGINS: http://localhost:5173,http://localhost:3000
       MAX_UPLOAD_MB: "20"
+      S3_ENDPOINT: http://documentos-s3:8333
+      S3_ACCESS_KEY: documentos
+      S3_SECRET_KEY: documentos-segredo-dev
+      S3_BUCKET: documentos
     ports:
       - "8081:8081"
     depends_on:
       documentos-db:
         condition: service_healthy
+      documentos-s3:
+        condition: service_started
 
   prontuario-db:
     image: postgres:17-alpine
@@ -67,4 +87,5 @@ services:
 
 volumes:
   documentos-db-dados:
+  documentos-s3-dados:
   prontuario-db-dados:
