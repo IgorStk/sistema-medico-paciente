@@ -44,24 +44,45 @@ para o serviço certo.
 services/
   documentos-service/   Go: upload, consulta e download de documentos
   prontuario-service/   Go: prontuário, histórico e laudos (consome documentos-service)
-docker-compose.yml      sobe todos os serviços e bancos
+scripts/rodar-supabase.ps1  roda os serviços Go sem Docker, usando o Supabase
+docker-compose*.yml     alternativa com Docker (opcional)
 go.work                 workspace Go (para o VSCode/gopls enxergar os dois módulos)
 ```
 
-## Como rodar
+## Como rodar os serviços em Go
 
-Pré-requisito: [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+Os bancos ficam no **Supabase**: um projeto por serviço (`documentos` e
+`prontuario`). Os arquivos ficam no **Supabase Storage** do projeto
+`documentos`. Nada de banco roda na sua máquina.
 
-```bash
-docker compose up --build
+Pré-requisito: [Go](https://go.dev/dl/) 1.27 ou mais novo.
+
+1. Copie `.env.example` para `.env` e preencha com as URLs e chaves do Supabase.
+   O `.env` não vai para o Git: peça os valores a quem cuida dos serviços em Go.
+2. No PowerShell, na raiz do repositório:
+
+```powershell
+.\scripts\rodar-supabase.ps1
 ```
 
-Teste rápido:
+O script compila e sobe os dois serviços no mesmo terminal (Ctrl+C para os dois).
+As tabelas e o bucket são criados automaticamente na primeira subida.
 
-```bash
-curl http://localhost:8081/health
-curl http://localhost:8082/health
-```
+| Serviço | URL |
+|---|---|
+| documentos-service | http://localhost:8081/health |
+| prontuario-service | http://localhost:8082/health |
+
+Para ver os dados, use o painel do Supabase: **Table Editor** para as tabelas e
+**Storage** para os arquivos.
+
+### Alternativa com Docker (opcional)
+
+Para quem tem o Docker Desktop, o `docker-compose.yml` sobe tudo localmente,
+com Postgres e um S3 local (SeaweedFS), sem precisar do Supabase. Use
+`docker compose up --build`. O `docker-compose.supabase.yml` faz o mesmo
+apontando para o Supabase. O build de imagens não funciona com o repositório
+dentro de uma pasta do OneDrive.
 
 ## Convenções da equipe
 

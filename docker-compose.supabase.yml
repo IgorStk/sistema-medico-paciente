@@ -1,0 +1,27 @@
+# Modo Supabase: os serviços Go usam o Postgres e o Storage do Supabase em vez
+# dos containers locais. As credenciais vêm do arquivo .env (nunca commitado).
+#
+# Uso (na raiz do repositório):
+#   docker compose -f docker-compose.yml -f docker-compose.supabase.yml up --build -d documentos-service prontuario-service
+#
+# Como os serviços são nomeados no comando e as dependências locais são
+# removidas abaixo, os containers documentos-db, documentos-s3 e
+# prontuario-db não sobem.
+
+services:
+  documentos-service:
+    environment:
+      DATABASE_URL: ${DOCUMENTOS_DATABASE_URL:?defina DOCUMENTOS_DATABASE_URL no .env}
+      S3_ENDPOINT: ${DOCUMENTOS_S3_ENDPOINT:?defina DOCUMENTOS_S3_ENDPOINT no .env}
+      S3_REGION: ${DOCUMENTOS_S3_REGION:?defina DOCUMENTOS_S3_REGION no .env}
+      S3_ACCESS_KEY: ${DOCUMENTOS_S3_ACCESS_KEY:?defina DOCUMENTOS_S3_ACCESS_KEY no .env}
+      S3_SECRET_KEY: ${DOCUMENTOS_S3_SECRET_KEY:?defina DOCUMENTOS_S3_SECRET_KEY no .env}
+      S3_BUCKET: ${DOCUMENTOS_S3_BUCKET:-documentos}
+    depends_on: !reset {}
+
+  prontuario-service:
+    environment:
+      DATABASE_URL: ${PRONTUARIO_DATABASE_URL:?defina PRONTUARIO_DATABASE_URL no .env}
+    depends_on: !override
+      documentos-service:
+        condition: service_started
