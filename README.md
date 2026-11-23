@@ -8,17 +8,35 @@ envio de exames antes do atendimento, recebimento de laudos sem deslocamento e,
 como evolução futura, triagem assistida por IA por especialidade.
 
 Monorepo com microsserviços em linguagens diferentes, integrados por um
-frontend em React. Cada serviço tem o seu próprio banco de dados.
+frontend em React/Next.js que acessa os serviços via API Gateway. Os serviços
+conversam entre si por REST (JSON) e cada um tem o seu próprio banco ou
+armazenamento.
 
-## Equipe e serviços
+## Equipe
 
-| Integrante | Linguagem | Serviço | Porta | Banco |
-|---|---|---|---|---|
-| _(seu nome)_ | Go | `documentos-service` (provedor) | 8081 | `documentos_db` (Postgres, 5433) |
-| _(seu nome)_ | Go | `prontuario-service` (consumidor) | 8082 | `prontuario_db` (Postgres, 5434) |
-| _(integrante)_ | _(linguagem)_ | _(serviço)_ | | |
-| _(integrante)_ | _(linguagem)_ | _(serviço)_ | | |
-| _(equipe)_ | React | `frontend` | 5173 | — |
+| Integrante | Linguagem |
+|---|---|
+| João Pedro Sales | PHP (Laravel) |
+| Vitor Brito | Java (Spring Boot) |
+| Michael David | Python (FastAPI) |
+| Igor Roberto | Go |
+
+## Serviços
+
+| Integrante | Linguagem | Serviço | Operações | Banco / armazenamento | Porta local |
+|---|---|---|---|---|---|
+| João Pedro Sales | PHP (Laravel) | `auth` | login, logout, emitir e validar JWT, renovar sessão | PostgreSQL (usuários/sessões) | a definir |
+| João Pedro Sales | PHP (Laravel) | `usuarios` | cadastrar paciente, cadastrar médico (CRM, especialidade), atualizar cadastro, consultar dados de contato | PostgreSQL (usuários/sessões) | a definir |
+| Vitor Brito | Java (Spring Boot) | `agendamento` | agendar, cancelar e remarcar consulta, listar agenda do médico no dia, verificar disponibilidade, confirmar consulta | PostgreSQL (consultas) | a definir |
+| Vitor Brito | Java (Spring Boot) | `notificacao` | notificar por e-mail, push ou WhatsApp, listar mensagens enviadas a um usuário | SMTP · Firebase Push · WhatsApp API | a definir |
+| Michael David | Python (FastAPI) | `triagem` | solicitar triagem de uma consulta, gerar sugestão (resumo clínico, rascunho de conduta, exames faltantes) | Provedor de IA externo (API LLM) | a definir |
+| Michael David | Python (FastAPI) | `especialidades` | listar especialidades, consultar/atualizar configuração (prompt base, documentos esperados), calcular exames faltantes | PostgreSQL (config. especialidade) | a definir |
+| Igor Roberto | Go | [`documentos`](services/documentos-service) | enviar documento (exame prévio, laudo, receita, atestado), baixar documento, listar documentos da consulta | Amazon S3 (arquivos) + PostgreSQL `documentos_db` (metadados, 5433) | 8081 |
+| Igor Roberto | Go | [`prontuario`](services/prontuario-service) | anexar documento ao prontuário, consultar histórico clínico do paciente, emitir laudo | PostgreSQL `prontuario_db` (5434) | 8082 |
+| Equipe | React / Next.js | `frontend` | AppPaciente (entrar, agendar consulta, enviar exame prévio) e AppMedico (ver agenda, ver exames, triar, emitir laudo) | — | a definir |
+
+O **API Gateway** recebe as chamadas do frontend, valida o JWT e encaminha
+para o serviço certo.
 
 ## Estrutura
 
@@ -49,5 +67,5 @@ curl http://localhost:8082/health
 
 - IDs são UUID; datas em ISO 8601 (UTC).
 - Respostas de erro no formato `{"erro": "mensagem"}`.
-- CORS liberado para o frontend em `http://localhost:5173`.
+- CORS configurável por serviço (variável `CORS_ORIGINS`).
 - Commits sempre pela CLI, pelo VSCode ou pelo GitHub Desktop, nunca pela interface web do GitHub.
